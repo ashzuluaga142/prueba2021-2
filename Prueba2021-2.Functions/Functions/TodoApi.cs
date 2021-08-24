@@ -64,51 +64,51 @@ namespace Prueba2021_2.Functions.Functions
 
         [FunctionName(nameof(UpdateTodo))]//tabla actualizar 
         public static async Task<IActionResult> UpdateTodo(
-               [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "todo/{id}")] HttpRequest req,
-               [Table("todo", Connection = "AzureWebJobsStorage")] CloudTable todoTable,
-               string id,
-               ILogger log)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "todo/{id}")] HttpRequest req,
+            [Table("todo", Connection = "AzureWebJobsStorage")] CloudTable todoTable,
+            string id,
+            ILogger log)
+    {
+        log.LogInformation($"Update for todo: {id}, received."); //id  recivido 
+
+        string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+        Todo todo = JsonConvert.DeserializeObject<Todo>(requestBody);
+
+        // Validate todo ID
+        TableOperation findOperation = TableOperation.Retrieve<TodoEntity>("TODO", id);
+        TableResult findResult = await todoTable.ExecuteAsync(findOperation);
+        if (findResult.Result == null)
         {
-            log.LogInformation($"Update for todo: {id}, received."); //id  recivido 
-
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            Todo todo = JsonConvert.DeserializeObject<Todo>(requestBody);
-
-            // Validate todo ID
-            TableOperation findOperation = TableOperation.Retrieve<TodoEntity>("TODO", id);
-            TableResult findResult = await todoTable.ExecuteAsync(findOperation);
-            if (findResult.Result == null)
+            return new BadRequestObjectResult(new Response
             {
-                return new BadRequestObjectResult(new Response
-                {
-                    IsSuccess = false,
-                    Message = "Todo not found."
-                });
-            }
-            //update todo - Actualizar el todoo
-            TodoEntity todoEntity = (TodoEntity)findResult.Result;
-            todoEntity.IsCompleted = todo.IsCompleted;
-
-            if (!string.IsNullOrEmpty(todo.TaskDescription))
-            {
-                todoEntity.TaskDescription = todo.TaskDescription; //Actualizar la descripcion
-
-            }
-
-            TableOperation addOperation = TableOperation.Replace(todoEntity);
-            await todoTable.ExecuteAsync(addOperation);
-
-            string message = $"Todo: {id}, Update in table";
-            log.LogInformation(message);
-
-            return new OkObjectResult(new Response
-            {
-                IsSuccess = true,
-                Message = message,
-                Result = todoEntity
+                IsSuccess = false,
+                Message = "Todo not found."
             });
+        }
+        //update todo - Actualizar el todoo
+        TodoEntity todoEntity = (TodoEntity)findResult.Result;
+        todoEntity.IsCompleted = todo.IsCompleted;
+
+        if (!string.IsNullOrEmpty(todo.TaskDescription))
+        {
+            todoEntity.TaskDescription = todo.TaskDescription; //Actualizar la descripcion
 
         }
+
+        TableOperation addOperation = TableOperation.Replace(todoEntity);
+        await todoTable.ExecuteAsync(addOperation);
+
+        string message = $"Todo: {id}, Update in table";
+        log.LogInformation(message);
+
+        return new OkObjectResult(new Response
+        {
+            IsSuccess = true,
+            Message = message,
+            Result = todoEntity
+        });
+
+    }
       
         [FunctionName(nameof(GetAllTodos))]//todos los  todos
         public static async Task<IActionResult> GetAllTodos(
@@ -137,10 +137,10 @@ namespace Prueba2021_2.Functions.Functions
 
         [FunctionName(nameof(GetTodoById))]//Filtrar
         public static IActionResult GetTodoById(
-                [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "todo/{id}")] HttpRequest req,
-                [Table("todo","TODO","{id}", Connection = "AzureWebJobsStorage")] TodoEntity todoEntity,
-                string id,
-                ILogger log)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "todo/{id}")] HttpRequest req,
+            [Table("todo","TODO","{id}", Connection = "AzureWebJobsStorage")] TodoEntity todoEntity,
+            string id,
+            ILogger log)
         {
             log.LogInformation($"Get todo by id: {id}, Recevied.");
 
@@ -154,6 +154,38 @@ namespace Prueba2021_2.Functions.Functions
             }
 
             string message = $"Todo: {todoEntity.RowKey}, retrieved.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = todoEntity
+            });
+
+
+        }
+
+        [FunctionName(nameof(DeleteTodo))]//Borrar Tarea
+        public static async Task<IActionResult> DeleteTodo(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "todo/{id}")] HttpRequest req,
+            [Table("todo", "TODO", "{id}", Connection = "AzureWebJobsStorage")] TodoEntity todoEntity,
+            [Table("todo", Connection = "AzureWebJobsStorage")] CloudTable todoTable,
+            string id,
+            ILogger log)
+    {
+            log.LogInformation($"Get todo by id: {id}, Recevied.");
+
+            if (todoEntity == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "Todo not found."
+                });
+            }
+            await todoTable.ExecuteAsync(TableOperation.Delete(todoEntity));
+            string message = $"Todo: {todoEntity.RowKey}, delete.";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
