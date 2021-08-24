@@ -7,6 +7,6 @@ namespace Prueba2021_2.Tests.Helpers
     public enum LoggerTypes
     {
         Null,
-        list
+        list,
     }
 }
