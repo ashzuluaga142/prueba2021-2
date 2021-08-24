@@ -9,7 +9,7 @@ using Prueba2021_2.Tests.Helpers;
 using System;
 using System.IO;
 
-namespace Prueba2021_2.Tests
+namespace Prueba2021_2.Tests.Helpers
 {
     public class TestFactory
     {
